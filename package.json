@@ -8,7 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "@monaco-editor/loader": "^1.2.0",
+    "@monaco-editor/loader": "1.2.0",
     "core-js": "^3.6.5",
     "monaco-editor": "^0.32.1",
     "monaco-editor-webpack-plugin": "^7.0.1",
