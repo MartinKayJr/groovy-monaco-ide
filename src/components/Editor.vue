@@ -31,50 +31,194 @@ export default {
         extensions: [".groovy"],
         aliases: ["groovy"]
       })
-          monaco.languages.setMonarchTokensProvider('groovy', {
-          tokenizer: {
-              root: [
-                  // 注释
-                  [/(\/\/.*)|(\/\*[\s\S]*?\*\/)/, 'comment'],
+      monaco.languages.setMonarchTokensProvider('groovy', {
 
-                  // 字符串
-                  [/"([^"\\]|\\.)*$/, 'string.invalid'], // 未闭合的字符串
-                  [/"/, 'string', '@string'],
+        keywords: [
+          'abstract',
+          'continue',
+          'for',
+          'new',
+          'switch',
+          'assert',
+          'goto',
+          'do',
+          'if',
+          'private',
+          'this',
+          'break',
+          'protected',
+          'throw',
+          'else',
+          'public',
+          'enum',
+          'return',
+          'catch',
+          'try',
+          'interface',
+          'static',
+          'class',
+          'finally',
+          'const',
+          'super',
+          'while',
+          'true',
+          'false',
+        ],
 
-                  // 关键字
-                  [
-                      /(def|if|else|for|while|switch|case|break|continue|return|try|catch|finally|throw|assert|import|package|class|interface|extends|implements|new|this|super|static|final|abstract|native|synchronized|volatile|transient|public|protected|private|void|boolean|byte|char|short|int|long|float|double)\b/,
-                      'keyword'
-                  ],
+        typeKeywords: [
+          'boolean',
+          'double',
+          'byte',
+          'int',
+          'short',
+          'char',
+          'void',
+          'long',
+          'float',
+        ],
 
-                  // 标识符
-                  [/[a-zA-Z_$][a-zA-Z0-9_$]*/, 'identifier'],
+        operators: [
+          '=',
+          '>',
+          '<',
+          '!',
+          '~',
+          '?',
+          ':',
+          '==',
+          '<=',
+          '>=',
+          '!=',
+          '&&',
+          '||',
+          '++',
+          '--',
+          '+',
+          '-',
+          '*',
+          '/',
+          '&',
+          '|',
+          '^',
+          '%',
+          '<<',
+          '>>',
+          '>>>',
+          '+=',
+          '-=',
+          '*=',
+          '/=',
+          '&=',
+          '|=',
+          '^=',
+          '%=',
+          '<<=',
+          '>>=',
+          '>>>=',
+        ],
 
-                  // 数字
-                  [/\d*\.\d+([eE][-+]?\d+)?/, 'number.float'],
-                  [/\d+/, 'number'],
+        // we include these common regular expressions
+        symbols: /[=><!~?:&|+\-*/^%]+/,
 
-                  // 操作符和分隔符
-                  [/[{}()[]]/, '@brackets'],
-                  [/[+\-*/%=&|~^<>!]/, 'operator'],
+        // C# style strings
+        escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 
-                  // 空白字符
-                  { include: '@whitespace' }
-              ],
+        // The main tokenizer for our languages
+        tokenizer: {
+          root: [
+            // identifiers and keywords
+            [
+              /[a-z_$][\w$]*/,
+              {
+                cases: {
+                  '@typeKeywords': 'keyword',
+                  '@keywords': 'keyword',
+                  '@default': 'identifier',
+                },
+              },
+            ],
+            [/[A-Z][\w$]*/, 'type.identifier'], // to show class names nicely
 
-              string: [
-                  [/[^\\"]+/, 'string'],
-                  [/"/, 'string', '@pop']
-              ],
+            // whitespace
+            { include: '@whitespace' },
 
-              whitespace: [
-                  [/[ \t\r\n]+/, 'white'],
-                  [/\s+/, 'white']
-              ]
-          }
+            // delimiters and operators
+            [/[{}()[\]]/, '@brackets'],
+            [/[<>](?!@symbols)/, '@brackets'],
+            [
+              /@symbols/,
+              {
+                cases: {
+                  '@operators': 'operator',
+                  '@default': '',
+                },
+              },
+            ],
+
+            // @ annotations.
+            // As an example, we emit a debugging log message on these tokens.
+            // Note: message are supressed during the first load -- change some lines to see them.
+            [
+              /@\s*[a-zA-Z_$][\w$]*/,
+              { token: 'annotation', log: 'annotation token: $0' },
+            ],
+
+            // numbers
+            [/\d*\.\d+([eE][-+]?\d+)?/, 'number.float'],
+            [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+            [/\d+/, 'number'],
+
+            // delimiter: after number because of .\d floats
+            [/[;,.]/, 'delimiter'],
+
+            // strings
+            [/("|')([^("|')\\]|\\.)*$/, 'string.invalid'], // non-teminated string
+            [/("|')/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+
+            // characters
+            [/'[^\\']'/, 'string'],
+            [/(')(@escapes)(')/, ['string', 'string.escape', 'string']],
+            [/'/, 'string.invalid'],
+          ],
+
+          comment: [
+            [/[^/*]+/, 'comment'],
+            [/\/\*/, 'comment', '@push'], // nested comment
+            ['\\*/', 'comment', '@pop'],
+            [/[/*]/, 'comment'],
+          ],
+
+          string: [
+            [/[^\\("|')]+/, 'string'],
+            [/@escapes/, 'string.escape'],
+            [/\\./, 'string.escape.invalid'],
+            [/("|')/, { token: 'string.quote', bracket: '@close', next: '@pop' }],
+          ],
+
+          whitespace: [
+            [/[ \t\r\n]+/, 'white'],
+            [/\/\*/, 'comment', '@comment'],
+            [/\/\/.*$/, 'comment'],
+          ],
+
+        },
+
+          
+      })
+      monaco.languages.onLanguage('groovy', function() {
+        monaco.languages.setLanguageConfiguration('groovy', {
+            comments: {
+                lineComment: '//',
+                blockComment: ['/*', '*/'],
+            },
+            brackets: [
+                ['{', '}'],
+                ['(', ')']
+            ],
+        })
       })
       const model =  monaco.editor.createModel('' , 'groovy' ,  fileurl)
-        
+    
       const editorOptions = {
         model,
         theme: 'vs-dark',
